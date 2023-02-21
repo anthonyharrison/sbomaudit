@@ -1,2 +1,296 @@
-# sbomaudit
-Report on quality of SBOM contents
+# SBOMAUIDT
+
+SBOMAUDIT reports on the quality of the contents of an SBOM (Software Bill of Materials) by performing a number of checks. SBOMs are supported in a number of formats including
+[SPDX](https://www.spdx.org) and [CycloneDX](https://www.cyclonedx.org).
+
+## Installation
+
+To install use the following command:
+
+`pip install sbomaudit`
+
+Alternatively, just clone the repo and install dependencies using the following command:
+
+`pip install -U -r requirements.txt`
+
+The tool requires Python 3 (3.7+). It is recommended to use a virtual python environment especially
+if you are using different versions of python. `virtualenv` is a tool for setting up virtual python environments which
+allows you to have all the dependencies for the tool set up in a single environment, or have different environments set
+up for testing using different versions of Python.
+
+## Usage
+
+```
+usage: sbomaudit [-h] [-i INPUT_FILE] [--verbose] [--debug] [-V]
+
+SBOMAudit reports on the quality of an SBOM.
+
+options:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+
+Input:
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        Name of SBOM file
+  --verbose             verbose reporting
+
+Output:
+  --debug               add debug information
+```
+					
+## Operation
+
+The `--input-file` option is used to specify the SBOM to be processed. The format of the SBOM is determined according to
+the following filename conventions.
+
+| SBOM      | Format    | Filename extension |
+| --------- | --------- |--------------------|
+| SPDX      | TagValue  | .spdx              |
+| SPDX      | JSON      | .spdx.json         |
+| SPDX      | YAML      | .spdx.yaml         |
+| SPDX      | YAML      | .spdx.yml          |
+| CycloneDX | JSON      | .json              |
+
+## Checks Performed
+
+The following section identifies the checks which are performed.
+
+### SBOM Format
+
+The following checks are performed:
+
+- Check that the version of the SBOM is either version 2.2 or 2.3 (SPDX) or version 1.3 or 1.4 (CycloneDX).
+
+- Check that a creator is defined.
+
+- Check that the time that the SBOM is created is defined.
+
+### Files
+
+The following checks are performed for each file item:
+
+- Check that a file name is specified.
+
+- Check that the file type is specified.
+
+- Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
+
+- Check that a copyright statement is specified. Note that NOASSERTION is not considered a valid copyright statement.
+
+### Packages
+
+The following checks are performed on each package item:
+
+- Check that a package name is specified.
+
+- Check that a supplier is specified.
+
+- Check that a version is specified.
+
+- Check that the package version is the latest released version of the package. The latest version checks are only performed on Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+
+- Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
+
+- Check that a [PURL specification](https://github.com/package-url/purl-spec) is provided for the package.
+
+- Check that a [CPE specification](https://nvd.nist.gov/products/cpe) is provided for the package.
+
+### Relationships
+
+The following checks are performed:
+
+- Check that relationships are defined.
+
+### NTIA Conformance
+
+The following checks are performed:
+
+- Check that the contents of the SBOM meet the minimum requirements for an SBOM as defined by the [NTIA](https://www.ntia.doc.gov/files/ntia/publications/sbom_minimum_elements_report.pdf).
+
+## Example
+
+Given the following SBOM (click.json)
+
+```
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuided03b5fe-42a8-41ee-b68f-114aa6fcead9",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-02-21T16:09:46Z",
+    "tools": [
+      {
+        "name": "sbom4python",
+        "version": "0.8.0"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "CDXRef-DOCUMENT",
+      "name": "Python-click"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "1-click",
+      "name": "click",
+      "version": "8.1.3",
+      "supplier": {
+        "name": "Armin Ronacher",
+        "contact": [
+          {
+            "email": "armin.ronacher@active-4.com"
+          }
+        ]
+      },
+      "cpe": "cpe:2.3:a:armin_ronacher:click:8.1.3:*:*:*:*:*:*:*",
+      "description": "Composable command line interface toolkit",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause",
+            "url": "https://opensource.org/licenses/BSD-3-Clause"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "url": "https://palletsprojects.com/p/click/",
+          "type": "other",
+          "comment": "Home page for project"
+        }
+      ],
+      "purl": "pkg:pypi/click@8.1.3"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "CDXRef-DOCUMENT",
+      "dependsOn": [
+        "1-click"
+      ]
+    }
+  ]
+}
+```
+
+The following command will audit the contents of the SBOM.
+
+```bash
+sbomaudit --input-file click.json
+╭─────────────────────╮
+│ SBOM Format Summary │
+╰─────────────────────╯
+[x] SBOM Format
+╭─────────────────╮
+│ Package Summary │
+╰─────────────────╯
+[x] Package Summary
+╭───────────────────────╮
+│ Relationships Summary │
+╰───────────────────────╯
+[x] Relationship Summary
+╭──────────────╮
+│ NTIA Summary │
+╰──────────────╯
+[x] NTIA Summary
+╭────────────────────╮
+│ SBOM Audit Summary │
+╰────────────────────╯
+[x] Checks passed 14
+[x] Checks failed 0                                                              
+```
+
+A verbose report and summary of the contents of the SBOM to the console.
+
+```bash
+sbomaudit --input-file click.json --verbose
+╭─────────────────────╮
+│ SBOM Format Summary │
+╰─────────────────────╯
+[x] Up to date CycloneDX Version
+[x] SBOM Creator identified
+[x] SBOM Creation time defined
+╭─────────────────╮
+│ Package Summary │
+╰─────────────────╯
+[x] Supplier included for package click
+[x] Version included for package click
+[x] License included for package click
+[x] SPDX Compatible License id included for package click
+[x] Using latest version of package click
+[x] CPE name included for package click
+[x] PURL included for package click
+[x] PURL name compatible with package click
+[x] NTIA compliant
+╭───────────────────────╮
+│ Relationships Summary │
+╰───────────────────────╯
+[x] Dependency relationships provided for NTIA compliancw
+╭──────────────╮
+│ NTIA Summary │
+╰──────────────╯
+[x] NTIA conformant
+╭────────────────────╮
+│ SBOM Audit Summary │
+╰────────────────────╯
+[x] Checks passed 14
+[x] Checks failed 0                                                        
+```
+
+The following is an example of the output which is generated
+when some checks on the contents of the SBOM fail.
+
+```bash
+sbomaudit --input-file click.json
+╭─────────────────────╮
+│ SBOM Format Summary │
+╰─────────────────────╯
+[x] SBOM Format
+╭─────────────────╮
+│ Package Summary │
+╰─────────────────╯
+[ ] Using latest version of package black : Version is 22.12.0; latest is 23.1.0
+[ ] Using latest version of package mypy-extensions : Version is 0.4.3; latest is 1.0.0
+[ ] SPDX Compatible License id included for package pathspec : MPL 2.0
+[ ] Using latest version of package pathspec : Version is 0.10.3; latest is 0.11.0
+[ ] License included for package platformdirs : MISSING
+[ ] SPDX Compatible License id included for package platformdirs : NOASSERTION
+[ ] Using latest version of package platformdirs : Version is 2.6.2; latest is 3.0.0
+[ ] CPE name included for package platformdirs : MISSING
+[ ] License included for package tomli : MISSING
+[ ] SPDX Compatible License id included for package tomli : NOASSERTION
+[ ] NTIA compliant : FAILED
+╭───────────────────────╮
+│ Relationships Summary │
+╰───────────────────────╯
+[x] Relationship Summary
+╭──────────────╮
+│ NTIA Summary │
+╰──────────────╯
+[ ] NTIA conformant : FAILED
+╭────────────────────╮
+│ SBOM Audit Summary │
+╰────────────────────╯
+[x] Checks passed 42
+[x] Checks failed 12                                                   
+```
+
+## Licence
+
+Licenced under the Apache 2.0 Licence.
+
+## Limitations
+
+The tool has the following limitations:
+
+- The latest version checks are only performed on Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+
+- Invalid SBOMs will result in unpredictable results.
+
+## Feedback and Contributions
+
+Bugs and feature requests can be made via GitHub Issues.

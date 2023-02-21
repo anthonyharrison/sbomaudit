@@ -1,0 +1,4 @@
+lib4sbom
+rich
+requests
+packageurl-python
