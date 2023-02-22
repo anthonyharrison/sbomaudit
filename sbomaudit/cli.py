@@ -36,6 +36,13 @@ def main(argv=None):
     )
 
     input_group.add_argument(
+        "--offline",
+        action="store_true",
+        help="operate in offline mode",
+        default=False,
+    )
+
+    input_group.add_argument(
         "--verbose",
         action="store_true",
         default=False,
@@ -72,8 +79,8 @@ def main(argv=None):
 
     defaults = {
         "input_file": "",
-        # "output_file": "",
         "debug": False,
+        "offline": False,
         "verbose": False,
         "format": "console",
     }
@@ -96,7 +103,7 @@ def main(argv=None):
 
     if args["debug"]:
         print("Input file", args["input_file"])
-        # print("Output file", args["output_file"])
+        print("Offline mode", args["offline"])
         print("Verbose", args["verbose"])
 
     sbom_parser = SBOMParser()
@@ -104,7 +111,7 @@ def main(argv=None):
     try:
         sbom_parser.parse_file(input_file)
 
-        sbom_audit = SBOMaudit(args["verbose"])
+        sbom_audit = SBOMaudit(args["verbose"], offline = args["offline"])
         sbom_audit.audit_sbom(sbom_parser)
 
     except FileNotFoundError:

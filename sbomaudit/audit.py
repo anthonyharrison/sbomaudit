@@ -11,8 +11,9 @@ from rich.text import Text
 
 
 class SBOMaudit:
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, offline = False):
         self.verbose = verbose
+        self.offline = offline
         self.license_scanner = LicenseScanner()
         self.check_count = {"Fail": 0, "Pass": 0}
 
@@ -197,10 +198,10 @@ class SBOMaudit:
                     cpe_used = False
                     if external_refs is not None:
                         for external_ref in external_refs:
-                            if external_ref[0] == "PACKAGE-MANAGER":
+                            if external_ref[0] in ["PACKAGE-MANAGER", "PACKAGE_MANAGER"]:
                                 purl_used = True
                                 purl = PackageURL.from_string(external_ref[2]).to_dict()
-                                if purl["type"] == "pypi":
+                                if purl["type"] == "pypi" and not self.offline:
                                     # Python package detected
                                     latest_version = self.find_latest_version(name)
                                 purl_name = purl["name"]

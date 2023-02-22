@@ -32,7 +32,9 @@ options:
 Input:
   -i INPUT_FILE, --input-file INPUT_FILE
                         Name of SBOM file
+  --offline             operate in offline mode
   --verbose             verbose reporting
+
 
 Output:
   --debug               add debug information
@@ -50,6 +52,9 @@ the following filename conventions.
 | SPDX      | YAML      | .spdx.yaml         |
 | SPDX      | YAML      | .spdx.yml          |
 | CycloneDX | JSON      | .json              |
+
+The `--offline` option is used when the tool is used in an environment where access to external systems is not available. This means
+that some audit checks are not performed.
 
 ## Checks Performed
 
@@ -87,7 +92,7 @@ The following checks are performed on each package item:
 
 - Check that a version is specified.
 
-- Check that the package version is the latest released version of the package. The latest version checks are only performed on Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+- Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
 
 - Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
 
