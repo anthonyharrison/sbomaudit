@@ -21,9 +21,9 @@ up for testing using different versions of Python.
 ## Usage
 
 ```
-usage: sbomaudit [-h] [-i INPUT_FILE] [--verbose] [--debug] [-V]
+usage: sbomaudit [-h] [-i INPUT_FILE] [--offline] [--cpecheck] [--purlcheck] [--verbose] [--debug] [-V]
 
-SBOMAudit reports on the quality of an SBOM.
+SBOMAudit reports on the quality of the contents of a SBOM.
 
 options:
   -h, --help            show this help message and exit
@@ -33,11 +33,17 @@ Input:
   -i INPUT_FILE, --input-file INPUT_FILE
                         Name of SBOM file
   --offline             operate in offline mode
+  --cpecheck            check for CPE specification
+  --purlcheck           check for PURL specification
+  --disable-license-check
+                        disable check for SPDX License identifier
+  --allow ALLOW         Name of allow list file
+  --deny DENY           Name of deny list file
   --verbose             verbose reporting
-
 
 Output:
   --debug               add debug information
+
 ```
 					
 ## Operation
@@ -55,6 +61,37 @@ the following filename conventions.
 
 The `--offline` option is used when the tool is used in an environment where access to external systems is not available. This means
 that some audit checks are not performed.
+
+The `--cpecheck` and `--purlcheck` options are used to enable additional checks related to a SBOM component.
+The `--disable-license-check` option is used to disable the check that the licenses have valid [SPDX License identifiers](https://spdx.org/licenses/).
+
+The `--allow` and `--deny` options are used to specify additional checks related to licenses and packages which are to be allowed or denied within a SBOM component.
+An **_allow_** file contains the set of licenses and packages which to be contained within the SBOM; this may be useful to ensure that the SBOM does not contain any
+unapproved licenses or packages not identified in a software design. A **_deny_** file is used to specify the licenses and packages which must not be contained within the SBOM.
+
+### Allow and Deny list file formats
+
+The files are text files consisting of two sections
+
+- List of SPDX license identifiers
+- Lst of Package names
+
+Each section is optional.
+
+In this sample allow file, this would only allow cemponents with the MIT, Apache-2.0 or BSD-3-Clause licenses.
+It is also only expecting a single package 'click'.
+
+```bash
+# This is an example ALLOW list file for SBOMAUDIT
+# Allowed licenses
+[license]
+MIT
+Apache-2.0
+BSD-3-Clause
+# Allowed packages 
+[package] 
+click                                                           
+```
 
 ## Checks Performed
 
@@ -80,6 +117,10 @@ The following checks are performed for each file item:
 
 - Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
 
+- Optionally check that the license is allowed as specified in the ALLOW list
+
+- Optionally check that the licence is not included in the licenses specified in the DENY list
+
 - Check that a copyright statement is specified. Note that NOASSERTION is not considered a valid copyright statement.
 
 ### Packages
@@ -88,6 +129,10 @@ The following checks are performed on each package item:
 
 - Check that a package name is specified.
 
+- Optionally check that the package name is allowed as specified in the ALLOW list
+
+- Optionally check that the package name is not included in the packages specified in the DENY list
+
 - Check that a supplier is specified.
 
 - Check that a version is specified.
@@ -95,6 +140,10 @@ The following checks are performed on each package item:
 - Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
 
 - Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
+
+- Optionally check that the license is allowed as specified in the ALLOW list
+
+- Optionally check that the licence is not included in the licenses specified in the DENY list
 
 - Check that a [PURL specification](https://github.com/package-url/purl-spec) is provided for the package.
 
@@ -205,14 +254,14 @@ sbomaudit --input-file click.json
 ╭────────────────────╮
 │ SBOM Audit Summary │
 ╰────────────────────╯
-[x] Checks passed 14
+[x] Checks passed 11
 [x] Checks failed 0                                                              
 ```
 
 A verbose report and summary of the contents of the SBOM to the console.
 
 ```bash
-sbomaudit --input-file click.json --verbose
+sbomaudit --input-file click.json --verbose --cpecheck --purlcheck
 ╭─────────────────────╮
 │ SBOM Format Summary │
 ╰─────────────────────╯
@@ -250,7 +299,6 @@ The following is an example of the output which is generated
 when some checks on the contents of the SBOM fail.
 
 ```bash
-sbomaudit --input-file click.json
 ╭─────────────────────╮
 │ SBOM Format Summary │
 ╰─────────────────────╯
@@ -258,16 +306,16 @@ sbomaudit --input-file click.json
 ╭─────────────────╮
 │ Package Summary │
 ╰─────────────────╯
-[ ] Using latest version of package black : Version is 22.12.0; latest is 23.1.0
-[ ] Using latest version of package mypy-extensions : Version is 0.4.3; latest is 1.0.0
-[ ] SPDX Compatible License id included for package pathspec : MPL 2.0
-[ ] Using latest version of package pathspec : Version is 0.10.3; latest is 0.11.0
-[ ] License included for package platformdirs : MISSING
-[ ] SPDX Compatible License id included for package platformdirs : NOASSERTION
-[ ] Using latest version of package platformdirs : Version is 2.6.2; latest is 3.0.0
-[ ] CPE name included for package platformdirs : MISSING
-[ ] License included for package tomli : MISSING
-[ ] SPDX Compatible License id included for package tomli : NOASSERTION
+[ ] Using latest version of package black: Version is 22.12.0; latest is 23.1.0
+[ ] Using latest version of package mypy-extensions: Version is 0.4.3; latest is 1.0.0
+[ ] SPDX Compatible License id included for package pathspec: MPL 2.0
+[ ] Using latest version of package pathspec: Version is 0.10.3; latest is 0.11.0
+[ ] License included for package platformdirs: MISSING
+[ ] SPDX Compatible License id included for package platformdirs: NOASSERTION
+[ ] Using latest version of package platformdirs: Version is 2.6.2; latest is 3.0.0
+[ ] CPE name included for package platformdirs: MISSING
+[ ] License included for package tomli: MISSING
+[ ] SPDX Compatible License id included for package tomli: NOASSERTION
 [ ] NTIA compliant : FAILED
 ╭───────────────────────╮
 │ Relationships Summary │
