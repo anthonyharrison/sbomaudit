@@ -1,6 +1,8 @@
 # Copyright (C) 2023 Anthony Harrison
 # SPDX-License-Identifier: Apache-2.0
 
+from pathlib import Path
+
 import requests
 from lib4sbom.data.document import SBOMDocument
 from lib4sbom.license import LicenseScanner
@@ -11,11 +13,16 @@ from rich.text import Text
 
 
 class SBOMaudit:
-    def __init__(self, verbose=False, offline = False):
-        self.verbose = verbose
-        self.offline = offline
+    def __init__(self, options={}):
+        self.verbose = options.get("verbose", False)
+        self.offline = options.get("offline", False)
+        self.cpe_check = options.get("cpecheck", False)
+        self.purl_check = options.get("purlcheck", False)
+        self.license_check = options.get("license_check", True)
         self.license_scanner = LicenseScanner()
         self.check_count = {"Fail": 0, "Pass": 0}
+        self.allow_list = {}
+        self.deny_list = {}
 
     def _show_text(self, text):
         print(Text.styled(f"[x] {text}", "green"))
@@ -29,9 +36,9 @@ class SBOMaudit:
         else:
             # Red
             if value is not None:
-                print(Text.styled(f"[ ] {text} : {value}", "red"))
+                print(Text.styled(f"[ ] {text}: {value}", "red"))
             elif len(failure_text) > 0:
-                print(Text.styled(f"[ ] {text} : {failure_text}", "red"))
+                print(Text.styled(f"[ ] {text}: {failure_text}", "red"))
             else:
                 print(Text.styled(f"[ ] {text}", "red"))
             self.check_count["Fail"] = self.check_count["Fail"] + 1
@@ -62,6 +69,27 @@ class SBOMaudit:
             """
             )
         return pypi_version
+
+    def process_file(self, filename, allow):
+        # Only process if file exists
+        if Path(filename).resolve().exists():
+            if allow:
+                self._setup(filename, self.allow_list)
+            else:
+                self._setup(filename, self.deny_list)
+
+    def _setup(self, filename, data_list):
+        with open(filename, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("#"):
+                    # Comment so ignore
+                    continue
+                elif line.startswith("["):
+                    type = line.replace("[", "").replace("]", "").strip()
+                    data_list[type] = []
+                else:
+                    data_list[type].append(line.strip())
 
     def audit_sbom(self, sbom_parser):
         # Get constituent components of the SBOM
@@ -100,6 +128,11 @@ class SBOMaudit:
         files_valid = True
         packages_valid = True
 
+        allow_licenses = self.allow_list.get("license", None)
+        deny_licenses = self.deny_list.get("license", None)
+        allow_packages = self.allow_list.get("package", None)
+        deny_packages = self.deny_list.get("package", None)
+
         if len(files) > 0:
             self._heading("File Summary")
             fail_count = self.check_count["Fail"]
@@ -132,11 +165,24 @@ class SBOMaudit:
                             not (license in [None, "NOASSERTION"]),
                             failure_text="",
                         )
-                        self._check(
-                            f"SPDX Compatible License id included for {name}",
-                            spdx_license,
-                            failure_text=f"{license}",
-                        )
+                        if self.license_check:
+                            self._check(
+                                f"SPDX Compatible License id included for {name}",
+                                spdx_license,
+                                failure_text=f"{license}",
+                            )
+                        if allow_licenses is not None:
+                            self._check(
+                                f"Allowed License check for {name}",
+                                license in allow_licenses,
+                                failure_text=f"{license} not allowed",
+                            )
+                        if deny_licenses is not None:
+                            self._check(
+                                f"Denied License check for {name}",
+                                not (license in deny_licenses),
+                                failure_text=f"{license} not allowed",
+                            )
                         self._check(
                             f"Copyright defined - {name} : {copyright}",
                             not (copyright in [None, "NOASSERTION"]),
@@ -152,11 +198,24 @@ class SBOMaudit:
                             not (license in [None, "NOASSERTION"]),
                             failure_text="",
                         )
-                        self._check(
-                            f"SPDX Compatible License id included for {id}",
-                            spdx_license,
-                            failure_text=f"{license}",
-                        )
+                        if self.license_check:
+                            self._check(
+                                f"SPDX Compatible License id included for {id}",
+                                spdx_license,
+                                failure_text=f"{license}",
+                            )
+                        if allow_licenses is not None:
+                            self._check(
+                                f"Allowed License check for {id}",
+                                license in allow_licenses,
+                                failure_text=f"{license} not allowed",
+                            )
+                        if deny_licenses is not None:
+                            self._check(
+                                f"Denied License check for {id}",
+                                not (license in deny_licenses),
+                                failure_text=f"{license} not allowed",
+                            )
                         self._check(
                             f"Copyright defined - {id} : {copyright}",
                             not (copyright in [None, "NOASSERTION"]),
@@ -198,7 +257,11 @@ class SBOMaudit:
                     cpe_used = False
                     if external_refs is not None:
                         for external_ref in external_refs:
-                            if external_ref[0] in ["PACKAGE-MANAGER", "PACKAGE_MANAGER"]:
+                            # Can be two specifications of PACKAGE MANAGER attribute!
+                            if external_ref[0] in [
+                                "PACKAGE-MANAGER",
+                                "PACKAGE_MANAGER",
+                            ]:
                                 purl_used = True
                                 purl = PackageURL.from_string(external_ref[2]).to_dict()
                                 if purl["type"] == "pypi" and not self.offline:
@@ -210,17 +273,42 @@ class SBOMaudit:
 
                     # Now summarise
                     if name is not None:
+                        if allow_packages is not None:
+                            self._check(
+                                f"Allowed Package check for package {name}",
+                                name in allow_packages,
+                                failure_text=f"{package} not allowed",
+                            )
+                        if deny_packages is not None:
+                            self._check(
+                                f"Denied Package check for package {name}",
+                                not (name in deny_packages),
+                                failure_text=f"{name} not allowed",
+                            )
                         self._check(f"Supplier included for package {name}", supplier)
                         self._check(f"Version included for package {name}", version)
                         self._check(
                             f"License included for package {name}",
                             not (license in ["NOT KNOWN", "NOASSERTION"]),
                         )
-                        self._check(
-                            f"SPDX Compatible License id included for package {name}",
-                            spdx_license,
-                            failure_text=f"{license}",
-                        )
+                        if self.license_check:
+                            self._check(
+                                f"SPDX Compatible License id included for package {name}",
+                                spdx_license,
+                                failure_text=f"{license}",
+                            )
+                        if allow_licenses is not None:
+                            self._check(
+                                f"Allowed License check for package {name}",
+                                license in allow_licenses,
+                                failure_text=f"{license} not allowed",
+                            )
+                        if deny_licenses is not None:
+                            self._check(
+                                f"Denied License check for package {name}",
+                                not (license in deny_licenses),
+                                failure_text=f"{license} not allowed",
+                            )
                         if latest_version is not None:
                             report = f"Version is {version}; latest is {latest_version}"
                             self._check(
@@ -228,14 +316,18 @@ class SBOMaudit:
                                 latest_version == version,
                                 failure_text=report,
                             )
-                        self._check(f"CPE name included for package {name}", cpe_used)
-                        self._check(f"PURL included for package {name}", purl_used)
-                        if purl_used:
-                            # Check name is consistent with package name
+                        if self.cpe_check:
                             self._check(
-                                f"PURL name compatible with package {name}",
-                                purl_name == name,
+                                f"CPE name included for package {name}", cpe_used
                             )
+                        if self.purl_check:
+                            self._check(f"PURL included for package {name}", purl_used)
+                            if purl_used:
+                                # Check name is consistent with package name
+                                self._check(
+                                    f"PURL name compatible with package {name}",
+                                    purl_name == name,
+                                )
                     else:
                         self._check(f"Package name missing for {id}", False)
 
@@ -259,7 +351,7 @@ class SBOMaudit:
         fail_count = self.check_count["Fail"]
 
         self._check(
-            "Dependency relationships provided for NTIA compliancw", relationships_valid
+            "Dependency relationships provided for NTIA compliance", relationships_valid
         )
 
         # Report if all checks passed

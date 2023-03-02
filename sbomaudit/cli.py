@@ -22,7 +22,7 @@ def main(argv=None):
         prog=app_name,
         description=textwrap.dedent(
             """
-            SBOMAudit reports on the quality of an SBOM.
+            SBOMAudit reports on the quality of the contents of a SBOM.
             """
         ),
     )
@@ -40,6 +40,41 @@ def main(argv=None):
         action="store_true",
         help="operate in offline mode",
         default=False,
+    )
+
+    input_group.add_argument(
+        "--cpecheck",
+        action="store_true",
+        help="check for CPE specification",
+        default=False,
+    )
+
+    input_group.add_argument(
+        "--purlcheck",
+        action="store_true",
+        help="check for PURL specification",
+        default=False,
+    )
+
+    input_group.add_argument(
+        "--disable-license-check",
+        action="store_true",
+        help="disable check for SPDX License identifier",
+        default=False,
+    )
+
+    input_group.add_argument(
+        "--allow",
+        action="store",
+        default="",
+        help="Name of allow list file",
+    )
+
+    input_group.add_argument(
+        "--deny",
+        action="store",
+        default="",
+        help="Name of deny list file",
     )
 
     input_group.add_argument(
@@ -81,6 +116,11 @@ def main(argv=None):
         "input_file": "",
         "debug": False,
         "offline": False,
+        "cpecheck": False,
+        "purlcheck": False,
+        "disable_license_check": False,
+        "allow": "",
+        "deny": "",
         "verbose": False,
         "format": "console",
     }
@@ -97,21 +137,34 @@ def main(argv=None):
         print("[ERROR] SBOM name must be specified.")
         return -1
 
-    # if args["format"] != "console" and args["output_file"] == "":
-    #     print("[ERROR] Output filename must be specified.")
-    #     return -1
-
     if args["debug"]:
         print("Input file", args["input_file"])
         print("Offline mode", args["offline"])
         print("Verbose", args["verbose"])
+        print("CPE Check", args["cpecheck"])
+        print("PURL Check", args["purlcheck"])
+        print("SPDX License Check", not args["disable_license_check"])
+        print("Allow list file", args["allow"])
+        print("Deny list file", args["deny"])
+
+    audit_options = {
+        "verbose": args["verbose"],
+        "offline": args["offline"],
+        "cpecheck": args["cpecheck"],
+        "purlcheck": args["purlcheck"],
+        "license_check": not args["disable_license_check"],
+    }
 
     sbom_parser = SBOMParser()
     # Load SBOM - will autodetect SBOM type
     try:
         sbom_parser.parse_file(input_file)
 
-        sbom_audit = SBOMaudit(args["verbose"], offline = args["offline"])
+        sbom_audit = SBOMaudit(options=audit_options)
+        if args["allow"]:
+            sbom_audit.process_file(args["allow"], allow=True)
+        if args["deny"]:
+            sbom_audit.process_file(args["deny"], allow=False)
         sbom_audit.audit_sbom(sbom_parser)
 
     except FileNotFoundError:
