@@ -113,7 +113,9 @@ class SBOMaudit:
                 )
             else:
                 self._check_value(
-                    "Up to date CycloneDX Version", ["1.3", "1.4"], document.get_version()
+                    "Up to date CycloneDX Version",
+                    ["1.3", "1.4"],
+                    document.get_version(),
                 )
             creation_time = document.get_created() is not None
             creator_identified = len(document.get_creator()) > 0
@@ -297,7 +299,10 @@ class SBOMaudit:
                             f"License included for package {name}",
                             not (license in ["NOT KNOWN", "NOASSERTION"]),
                         )
-                        if self.license_check and license not in ["NOT KNOWN", "NOASSERTION"]:
+                        if self.license_check and license not in [
+                            "NOT KNOWN",
+                            "NOASSERTION",
+                        ]:
                             self._check(
                                 f"SPDX Compatible License id included for package {name}",
                                 spdx_license,
