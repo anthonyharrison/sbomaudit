@@ -122,7 +122,7 @@ class SBOMaudit:
             self._check("SBOM Creation time defined", creation_time)
         else:
             # Not a valid SBOM file
-            self._check("SBOM format", False, failure_text="INVALID")
+            self._check("SBOM Format", False, failure_text="INVALID")
             creator_identified = False
             relationships_valid = False
         # Report if all checks passed
