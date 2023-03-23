@@ -102,23 +102,29 @@ class SBOMaudit:
         self._heading("SBOM Format Summary")
         fail_count = self.check_count["Fail"]
 
-        # Check recent version of SBOM
-        if document.get_type().lower() == "spdx":
-            self._check_value(
-                "Up to date SPDX Version",
-                ["SPDX-2.2", "SPDX-2.3"],
-                document.get_version(),
-            )
+        # Check that document is a valid SBOM
+        if document.get_type() is not None:
+            # Check recent version of SBOM
+            if document.get_type().lower() == "spdx":
+                self._check_value(
+                    "Up to date SPDX Version",
+                    ["SPDX-2.2", "SPDX-2.3"],
+                    document.get_version(),
+                )
+            else:
+                self._check_value(
+                    "Up to date CycloneDX Version", ["1.3", "1.4"], document.get_version()
+                )
+            creation_time = document.get_created() is not None
+            creator_identified = len(document.get_creator()) > 0
+            relationships_valid = len(relationships) > 0
+            self._check("SBOM Creator identified", creator_identified)
+            self._check("SBOM Creation time defined", creation_time)
         else:
-            self._check_value(
-                "Up to date CycloneDX Version", ["1.3", "1.4"], document.get_version()
-            )
-        creation_time = document.get_created() is not None
-        creator_identified = len(document.get_creator()) > 0
-        relationships_valid = len(relationships) > 0
-        self._check("SBOM Creator identified", creator_identified)
-        self._check("SBOM Creation time defined", creation_time)
-
+            # Not a valid SBOM file
+            self._check("SBOM format", False, failure_text="INVALID")
+            creator_identified = False
+            relationships_valid = False
         # Report if all checks passed
         if not self.verbose:
             if self.check_count["Fail"] == fail_count:
@@ -291,7 +297,7 @@ class SBOMaudit:
                             f"License included for package {name}",
                             not (license in ["NOT KNOWN", "NOASSERTION"]),
                         )
-                        if self.license_check:
+                        if self.license_check and license not in ["NOT KNOWN", "NOASSERTION"]:
                             self._check(
                                 f"SPDX Compatible License id included for package {name}",
                                 spdx_license,
