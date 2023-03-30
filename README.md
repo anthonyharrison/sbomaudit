@@ -115,11 +115,13 @@ The following checks are performed for each file item:
 
 - Check that the file type is specified.
 
-- Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
+- Check that a license is specified and that the license identified is a valid [SPDX License identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid license.
+
+- Check that the license is an [OSI Approved](https://opensource.org/licenses/) license.
 
 - Optionally check that the license is allowed as specified in the ALLOW list
 
-- Optionally check that the licence is not included in the licenses specified in the DENY list
+- Optionally check that the license is not included in the licenses specified in the DENY list
 
 - Check that a copyright statement is specified. Note that NOASSERTION is not considered a valid copyright statement.
 
@@ -139,11 +141,13 @@ The following checks are performed on each package item:
 
 - Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
 
-- Check that a licence is specified and that the licence identified is a valid [SPDX Licence identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid licence.
+- Check that a license is specified and that the license identified is a valid [SPDX License identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid license.
+
+- Check that the license is an [OSI Approved](https://opensource.org/licenses/) license.
 
 - Optionally check that the license is allowed as specified in the ALLOW list
 
-- Optionally check that the licence is not included in the licenses specified in the DENY list
+- Optionally check that the license is not included in the licenses specified in the DENY list
 
 - Check that a [PURL specification](https://github.com/package-url/purl-spec) is provided for the package.
 
@@ -332,9 +336,9 @@ when some checks on the contents of the SBOM fail.
 [x] Checks failed 12                                                   
 ```
 
-## Licence
+## License
 
-Licenced under the Apache 2.0 Licence.
+Licensed under the Apache 2.0 License.
 
 ## Limitations
 
