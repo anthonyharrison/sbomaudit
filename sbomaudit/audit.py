@@ -169,7 +169,7 @@ class SBOMaudit:
                             filetype is not None,
                         )
                         self._check(
-                            f"Licence specified - {name} : {license}",
+                            f"License specified - {name} : {license}",
                             not (license in [None, "NOASSERTION"]),
                             failure_text="",
                         )
@@ -179,6 +179,7 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
+                            self._check(f"OSI Approved license for {name}", self.license_scanner.osi_approved(license))
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for {name}",
@@ -202,7 +203,7 @@ class SBOMaudit:
                             filetype is not None,
                         )
                         self._check(
-                            f"Licence specified - {id} : {license}",
+                            f"License specified - {id} : {license}",
                             not (license in [None, "NOASSERTION"]),
                             failure_text="",
                         )
@@ -212,6 +213,7 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
+                            self._check(f"OSI Approved license for {id}", self.license_scanner.osi_approved(license))
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for {id}",
@@ -308,6 +310,7 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
+                            self._check(f"OSI Approved license for {name}", self.license_scanner.osi_approved(license))
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for package {name}",
