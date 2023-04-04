@@ -368,6 +368,28 @@ class SBOMaudit:
             "Dependency relationships provided for NTIA compliance", relationships_valid
         )
 
+        # Check all files/packages included in at least one relationship
+        if len(files) > 0:
+            for file in files:
+                name = file.get("name", None)
+                dep_check = False
+                if name is not None:
+                    for r in relationships:
+                        if name in [r.get("source"), r.get("target")]:
+                            dep_check = True
+                            break
+                self._check(f"Dependency relationship found for {name}", dep_check)
+        if len(packages) > 0:
+            for package in packages:
+                name = package.get("name", None)
+                dep_check = False
+                if name is not None:
+                    for r in relationships:
+                        if name in [r.get("source"), r.get("target")]:
+                            dep_check = True
+                            break
+                self._check(f"Dependency relationship found for {name}", dep_check)
+
         # Report if all checks passed
         if not self.verbose:
             if self.check_count["Fail"] == fail_count:

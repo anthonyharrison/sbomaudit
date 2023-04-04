@@ -159,6 +159,10 @@ The following checks are performed:
 
 - Check that relationships are defined.
 
+- Check that every file is included in at least one relationship.
+
+- Check that every package is included in at least one relationship.
+
 ### NTIA Conformance
 
 The following checks are performed:
