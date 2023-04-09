@@ -52,6 +52,24 @@ class SBOMaudit:
     def _check(self, text, value, failure_text="MISSING"):
         self._show_result(text, value, failure_text=failure_text)
 
+    def find_latest_version_maven(self, name):
+        """Returns the latest version of the package available at Maven Central."""
+
+        url: str = f"https://search.maven.org/solrsearch/select?q=a:{name}&wt=json"
+        maven_version = None
+        try:
+            package_json = requests.get(url).json()
+            maven_version = package_json["response"]["docs"][0]["latestVersion"]
+        except Exception as error:
+            print(
+                f"""
+            -------------------------- Can't check Maven Central for the latest version -------
+            Exception details: {error}
+            Please make sure you have a working internet connection or try again later.
+            """
+            )
+        return maven_version
+
     def find_latest_version(self, name):
         """Returns the latest version of the package available at PyPI."""
 
@@ -69,6 +87,29 @@ class SBOMaudit:
             """
             )
         return pypi_version
+
+    def get_latest_version(self, name, backend="PyPI"):
+        url: str = f"https://release-monitoring.org/api/v2/projects/?name={name}"
+        latest_version = None
+        try:
+            package_json = requests.get(url).json()
+            if package_json["total_items"] == 1 and package_json["items"][0]["backend"].lower() == backend.lower():
+                latest_version = package_json["items"][0]["stable_versions"][0]
+            else:
+                for item in package_json["items"]:
+                    if item["backend"].lower() == backend.lower():
+                        latest_version = item["stable_versions"][0]
+                        break
+
+        except Exception as error:
+            print(
+                f"""
+            -------------------------- Can't check for the latest version -------
+            Exception details: {error}
+            Please make sure you have a working internet connection or try again later.
+            """
+            )
+        return latest_version
 
     def process_file(self, filename, allow):
         # Only process if file exists
@@ -273,11 +314,20 @@ class SBOMaudit:
                                 "PACKAGE_MANAGER",
                             ]:
                                 purl_used = True
-                                purl = PackageURL.from_string(external_ref[2]).to_dict()
-                                if purl["type"] == "pypi" and not self.offline:
-                                    # Python package detected
-                                    latest_version = self.find_latest_version(name)
-                                purl_name = purl["name"]
+                                try:
+                                    purl = PackageURL.from_string(external_ref[2]).to_dict()
+                                    if not self.offline:
+                                        if purl["type"] == "pypi":
+                                            # Python package detected
+                                            latest_version = self.find_latest_version(name)
+                                        elif purl["type"] == "maven":
+                                            # Maven package detected
+                                            latest_version = self.find_latest_version_maven(name)
+                                        else:
+                                            latest_version = self.get_latest_version(name, backend=purl["type"])
+                                    purl_name = purl["name"]
+                                except ValueError:
+                                    purl_used = False
                             elif external_ref[1] in ["cpe22Type", "cpe23Type"]:
                                 cpe_used = True
 
@@ -335,7 +385,7 @@ class SBOMaudit:
                                 f"CPE name included for package {name}", cpe_used
                             )
                         if self.purl_check:
-                            self._check(f"PURL included for package {name}", purl_used)
+                            self._check(f"Valid PURL included for package {name}", purl_used)
                             if purl_used:
                                 # Check name is consistent with package name
                                 self._check(
