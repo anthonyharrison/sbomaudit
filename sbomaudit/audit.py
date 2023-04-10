@@ -93,7 +93,10 @@ class SBOMaudit:
         latest_version = None
         try:
             package_json = requests.get(url).json()
-            if package_json["total_items"] == 1 and package_json["items"][0]["backend"].lower() == backend.lower():
+            if (
+                package_json["total_items"] == 1
+                and package_json["items"][0]["backend"].lower() == backend.lower()
+            ):
                 latest_version = package_json["items"][0]["stable_versions"][0]
             else:
                 for item in package_json["items"]:
@@ -220,7 +223,10 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
-                            self._check(f"OSI Approved license for {name}", self.license_scanner.osi_approved(license))
+                            self._check(
+                                f"OSI Approved license for {name}",
+                                self.license_scanner.osi_approved(license),
+                            )
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for {name}",
@@ -254,7 +260,10 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
-                            self._check(f"OSI Approved license for {id}", self.license_scanner.osi_approved(license))
+                            self._check(
+                                f"OSI Approved license for {id}",
+                                self.license_scanner.osi_approved(license),
+                            )
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for {id}",
@@ -315,16 +324,24 @@ class SBOMaudit:
                             ]:
                                 purl_used = True
                                 try:
-                                    purl = PackageURL.from_string(external_ref[2]).to_dict()
+                                    purl = PackageURL.from_string(
+                                        external_ref[2]
+                                    ).to_dict()
                                     if not self.offline:
                                         if purl["type"] == "pypi":
                                             # Python package detected
-                                            latest_version = self.find_latest_version(name)
+                                            latest_version = self.find_latest_version(
+                                                name
+                                            )
                                         elif purl["type"] == "maven":
                                             # Maven package detected
-                                            latest_version = self.find_latest_version_maven(name)
+                                            latest_version = (
+                                                self.find_latest_version_maven(name)
+                                            )
                                         else:
-                                            latest_version = self.get_latest_version(name, backend=purl["type"])
+                                            latest_version = self.get_latest_version(
+                                                name, backend=purl["type"]
+                                            )
                                     purl_name = purl["name"]
                                 except ValueError:
                                     purl_used = False
@@ -360,7 +377,10 @@ class SBOMaudit:
                                 spdx_license,
                                 failure_text=f"{license}",
                             )
-                            self._check(f"OSI Approved license for {name}", self.license_scanner.osi_approved(license))
+                            self._check(
+                                f"OSI Approved license for {name}",
+                                self.license_scanner.osi_approved(license),
+                            )
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for package {name}",
@@ -385,7 +405,11 @@ class SBOMaudit:
                                 f"CPE name included for package {name}", cpe_used
                             )
                         if self.purl_check:
-                            self._check(f"Valid PURL included for package {name}", purl_used)
+                            self._check(
+                                f"PURL included for package {name}",
+                                purl_used,
+                                failure_text="MISSING or INVALID",
+                            )
                             if purl_used:
                                 # Check name is consistent with package name
                                 self._check(
