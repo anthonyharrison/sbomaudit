@@ -1,4 +1,4 @@
-# SBOMAUIDT
+# SBOMAUDIT
 
 SBOMAUDIT reports on the quality of the contents of an SBOM (Software Bill of Materials) by performing a number of checks. SBOMs are supported in a number of formats including
 [SPDX](https://www.spdx.org) and [CycloneDX](https://www.cyclonedx.org).
