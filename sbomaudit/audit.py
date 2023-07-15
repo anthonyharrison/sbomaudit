@@ -227,6 +227,10 @@ class SBOMaudit:
                                 f"OSI Approved license for {name}",
                                 self.license_scanner.osi_approved(license),
                             )
+                            self._check(
+                                f"Non-deprecated license for {name}",
+                                not self.license_scanner.deprecated(license),
+                            )
                         if allow_licenses is not None:
                             self._check(
                                 f"Allowed License check for {name}",
@@ -263,6 +267,10 @@ class SBOMaudit:
                             self._check(
                                 f"OSI Approved license for {id}",
                                 self.license_scanner.osi_approved(license),
+                            )
+                            self._check(
+                                f"Non-deprecated license for {name}",
+                                not self.license_scanner.deprecated(license),
                             )
                         if allow_licenses is not None:
                             self._check(
@@ -380,6 +388,10 @@ class SBOMaudit:
                             self._check(
                                 f"OSI Approved license for {name}",
                                 self.license_scanner.osi_approved(license),
+                            )
+                            self._check(
+                                f"Non-deprecated license for {name}",
+                                not self.license_scanner.deprecated(license),
                             )
                         if allow_licenses is not None:
                             self._check(
