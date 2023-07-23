@@ -158,7 +158,7 @@ class SBOMaudit:
             else:
                 self._check_value(
                     "Up to date CycloneDX Version",
-                    ["1.3", "1.4"],
+                    ["1.3", "1.4", "1.5"],
                     document.get_version(),
                 )
             creation_time = document.get_created() is not None
