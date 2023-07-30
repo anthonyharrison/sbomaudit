@@ -1,8 +1,11 @@
 # Copyright (C) 2023 Anthony Harrison
 # SPDX-License-Identifier: Apache-2.0
 
+import datetime
 from pathlib import Path
 
+import dateutil.parser
+import pytz
 import requests
 from lib4sbom.data.document import SBOMDocument
 from lib4sbom.license import LicenseScanner
@@ -19,6 +22,9 @@ class SBOMaudit:
         self.cpe_check = options.get("cpecheck", False)
         self.purl_check = options.get("purlcheck", False)
         self.license_check = options.get("license_check", True)
+        self.age = int(options.get("age", "0"))
+        DAYS_IN_YEAR = 365
+        self.maxage = int(options.get("maxage", "2")) * DAYS_IN_YEAR
         self.license_scanner = LicenseScanner()
         self.check_count = {"Fail": 0, "Pass": 0}
         self.allow_list = {}
@@ -70,14 +76,21 @@ class SBOMaudit:
             )
         return maven_version
 
-    def find_latest_version(self, name):
-        """Returns the latest version of the package available at PyPI."""
+    def find_latest_version(self, name, version=None):
+        """Returns the latest version and release date of the package available at PyPI."""
 
         url: str = f"https://pypi.org/pypi/{name}/json"
         pypi_version = None
+        pypi_date = None
         try:
             package_json = requests.get(url).json()
-            pypi_version = package_json["info"]["version"]
+            if version is None:
+                pypi_version = package_json["info"]["version"]
+            else:
+                pypi_version = version
+            pypi_date = package_json["releases"][pypi_version][0][
+                "upload_time_iso_8601"
+            ]
         except Exception as error:
             print(
                 f"""
@@ -86,7 +99,7 @@ class SBOMaudit:
             Please make sure you have a working internet connection or try again later.
             """
             )
-        return pypi_version
+        return pypi_version, pypi_date
 
     def get_latest_version(self, name, backend="PyPI"):
         url: str = f"https://release-monitoring.org/api/v2/projects/?name={name}"
@@ -321,6 +334,7 @@ class SBOMaudit:
                     # Check if package is the latest version
                     external_refs = package.get("externalreference", None)
                     latest_version = None
+                    latest_date = None
                     purl_used = False
                     cpe_used = False
                     if external_refs is not None:
@@ -338,8 +352,12 @@ class SBOMaudit:
                                     if not self.offline:
                                         if purl["type"] == "pypi":
                                             # Python package detected
-                                            latest_version = self.find_latest_version(
-                                                name
+                                            (
+                                                latest_version,
+                                                _,
+                                            ) = self.find_latest_version(name)
+                                            _, latest_date = self.find_latest_version(
+                                                name, version=version
                                             )
                                         elif purl["type"] == "maven":
                                             # Maven package detected
@@ -412,6 +430,27 @@ class SBOMaudit:
                                 latest_version == version,
                                 failure_text=report,
                             )
+                        if latest_date is not None:
+
+                            release_date = dateutil.parser.parse(latest_date)
+                            release_age = (
+                                pytz.utc.localize(datetime.datetime.utcnow())
+                                - release_date
+                            )
+
+                            report = f"Age of release is {release_age.days} days"
+                            self._check(
+                                f"Using mature version of package {name}",
+                                release_age.days > self.age,
+                                failure_text=report,
+                            )
+                            # Check age of release if not using the latest version
+                            if latest_version is not None and latest_version != version:
+                                self._check(
+                                    f"Using old version of package {name}",
+                                    release_age.days < self.maxage,
+                                    failure_text=report,
+                                )
                         if self.cpe_check:
                             self._check(
                                 f"CPE name included for package {name}", cpe_used

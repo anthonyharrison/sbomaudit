@@ -21,7 +21,7 @@ up for testing using different versions of Python.
 ## Usage
 
 ```
-usage: sbomaudit [-h] [-i INPUT_FILE] [--offline] [--cpecheck] [--purlcheck] [--verbose] [--debug] [-V]
+usage: sbomaudit [-h] [-i INPUT_FILE] [--offline] [--cpecheck] [--purlcheck] [--disable-license-check] [--age AGE] [--maxage MAXAGE] [--allow ALLOW] [--deny DENY] [--verbose] [--debug] [-V]
 
 SBOMAudit reports on the quality of the contents of a SBOM.
 
@@ -37,13 +37,14 @@ Input:
   --purlcheck           check for PURL specification
   --disable-license-check
                         disable check for SPDX License identifier
+  --age AGE             minimum age of package (as integer representing days) to report (default: 0)
+  --maxage MAXAGE       maximum age of package (as integer representing years) to report (default: 2)
   --allow ALLOW         Name of allow list file
   --deny DENY           Name of deny list file
   --verbose             verbose reporting
 
 Output:
   --debug               add debug information
-
 ```
 					
 ## Operation
@@ -63,7 +64,12 @@ The `--offline` option is used when the tool is used in an environment where acc
 that some audit checks are not performed.
 
 The `--cpecheck` and `--purlcheck` options are used to enable additional checks related to a SBOM component.
+
 The `--disable-license-check` option is used to disable the check that the licenses have valid [SPDX License identifiers](https://spdx.org/licenses/).
+
+The `--age` option can be used to report if a recent release of a package is being used.
+
+The `--maxage` option can be used to report if the release date of a package, which is not the latest version, is greater than the value specified. The default value is 2 years.
 
 The `--allow` and `--deny` options are used to specify additional checks related to licenses and packages which are to be allowed or denied within a SBOM component.
 An **_allow_** file contains the set of licenses and packages which to be contained within the SBOM; this may be useful to ensure that the SBOM does not contain any
@@ -140,6 +146,11 @@ The following checks are performed on each package item:
 - Check that a version is specified.
 
 - Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+
+- Check that a mature version of the package is being used as determined by the value specified in the `--age` option. The release date checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+
+- Check the age of a package being used, which is not the latest released version, is greater than the value specified in the `--maxage` option.
+The check is only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
 
 - Check that a license is specified and that the license identified is a valid [SPDX License identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid license.
 
@@ -283,7 +294,11 @@ sbomaudit --input-file click.json --verbose --cpecheck --purlcheck
 [x] Version included for package click
 [x] License included for package click
 [x] SPDX Compatible License id included for package click
+[x] OSI Approved license for click
+[x] Non-deprecated license for click
 [x] Using latest version of package click
+[x] Using mature version of package click
+[x] Using old version of package click
 [x] CPE name included for package click
 [x] PURL included for package click
 [x] PURL name compatible with package click
@@ -291,7 +306,8 @@ sbomaudit --input-file click.json --verbose --cpecheck --purlcheck
 ╭───────────────────────╮
 │ Relationships Summary │
 ╰───────────────────────╯
-[x] Dependency relationships provided for NTIA compliancw
+[x] Dependency relationships provided for NTIA compliance
+[x] Dependency relationship found for click
 ╭──────────────╮
 │ NTIA Summary │
 ╰──────────────╯
@@ -299,8 +315,8 @@ sbomaudit --input-file click.json --verbose --cpecheck --purlcheck
 ╭────────────────────╮
 │ SBOM Audit Summary │
 ╰────────────────────╯
-[x] Checks passed 14
-[x] Checks failed 0                                                        
+[x] Checks passed 19
+[x] Checks failed 0
 ```
 
 The following is an example of the output which is generated

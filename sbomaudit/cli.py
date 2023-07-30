@@ -64,6 +64,19 @@ def main(argv=None):
     )
 
     input_group.add_argument(
+        "--age",
+        action="store",
+        help="minimum age of package (as integer representing days) to report (default: 0)",
+        default=0,
+    )
+
+    input_group.add_argument(
+        "--maxage",
+        action="store",
+        help="maximum age of package (as integer representing years) to report (default: 2)",
+        default=2,
+    )
+    input_group.add_argument(
         "--allow",
         action="store",
         default="",
@@ -119,6 +132,8 @@ def main(argv=None):
         "cpecheck": False,
         "purlcheck": False,
         "disable_license_check": False,
+        "age": 0,
+        "maxage": 2,
         "allow": "",
         "deny": "",
         "verbose": False,
@@ -144,6 +159,8 @@ def main(argv=None):
         print("CPE Check", args["cpecheck"])
         print("PURL Check", args["purlcheck"])
         print("SPDX License Check", not args["disable_license_check"])
+        print("Minimum package age", args["age"])
+        print("Maximum package age", args["maxage"])
         print("Allow list file", args["allow"])
         print("Deny list file", args["deny"])
 
@@ -153,6 +170,8 @@ def main(argv=None):
         "cpecheck": args["cpecheck"],
         "purlcheck": args["purlcheck"],
         "license_check": not args["disable_license_check"],
+        "age": args["age"],
+        "maxage": args["maxage"],
     }
 
     sbom_parser = SBOMParser()

@@ -2,3 +2,5 @@ lib4sbom >= 0.4.0
 rich
 requests
 packageurl-python
+python-dateutil
+pytz
