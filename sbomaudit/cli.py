@@ -6,6 +6,7 @@ import sys
 import textwrap
 from collections import ChainMap
 
+from lib4sbom.output import SBOMOutput
 from lib4sbom.parser import SBOMParser
 
 from sbomaudit.audit import SBOMaudit
@@ -105,23 +106,13 @@ def main(argv=None):
         help="add debug information",
     )
 
-    # # Add format option
-    # output_group.add_argument(
-    #     "-f",
-    #     "--format",
-    #     action="store",
-    #     help="Output format (default: output to console)",
-    #     choices=["console", "markdown", "pdf"],
-    #     default="console",
-    # )
-    #
-    # output_group.add_argument(
-    #     "-o",
-    #     "--output-file",
-    #     action="store",
-    #     default="",
-    #     help="output filename (default: output to stdout)",
-    # )
+    output_group.add_argument(
+        "-o",
+        "--output-file",
+        action="store",
+        default="",
+        help="output filename (default: output to stdout)",
+    )
 
     parser.add_argument("-V", "--version", action="version", version=VERSION)
 
@@ -137,7 +128,7 @@ def main(argv=None):
         "allow": "",
         "deny": "",
         "verbose": False,
-        "format": "console",
+        "output_file": "",
     }
 
     raw_args = parser.parse_args(argv[1:])
@@ -163,6 +154,7 @@ def main(argv=None):
         print("Maximum package age", args["maxage"])
         print("Allow list file", args["allow"])
         print("Deny list file", args["deny"])
+        print("Output file", args["output_file"])
 
     audit_options = {
         "verbose": args["verbose"],
@@ -179,12 +171,16 @@ def main(argv=None):
     try:
         sbom_parser.parse_file(input_file)
 
-        sbom_audit = SBOMaudit(options=audit_options)
+        sbom_audit = SBOMaudit(options=audit_options, output=args["output_file"])
         if args["allow"]:
             sbom_audit.process_file(args["allow"], allow=True)
         if args["deny"]:
             sbom_audit.process_file(args["deny"], allow=False)
         sbom_audit.audit_sbom(sbom_parser)
+
+        if args["output_file"] != "":
+            audit_out = SBOMOutput(args["output_file"], "json")
+            audit_out.generate_output(sbom_audit.get_audit())
 
     except FileNotFoundError:
         print(f"{input_file} not found")

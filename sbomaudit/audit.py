@@ -16,7 +16,7 @@ from rich.text import Text
 
 
 class SBOMaudit:
-    def __init__(self, options={}):
+    def __init__(self, options={}, output=""):
         self.verbose = options.get("verbose", False)
         self.offline = options.get("offline", False)
         self.cpe_check = options.get("cpecheck", False)
@@ -29,9 +29,32 @@ class SBOMaudit:
         self.check_count = {"Fail": 0, "Pass": 0}
         self.allow_list = {}
         self.deny_list = {}
+        # Audit data in JSON
+        self.audit = {}
+        self.package_component = []
+        self.file_component = []
+        self.relationship_component = []
+        self.component = []
+        self.element = {}
+        self.console_out = output == ""
+
+    def get_audit(self):
+        return self.audit
+
+    def _component_message(self, message, state="Fail"):
+        element = {"text": message, "state": state}
+        if len(self.component) > 0:
+            self.component.append(element)
+        else:
+            self.component = [element]
+
+    def _send_to_console(self, text, colour):
+        if self.console_out:
+            print(Text.styled(text, colour))
 
     def _show_text(self, text):
-        print(Text.styled(f"[x] {text}", "green"))
+        self._send_to_console(f"[x] {text}", "green")
+        self._component_message(f"{text}", state="Pass")
 
     def _show_result(self, text, state, value=None, failure_text="MISSING"):
         if state:
@@ -42,15 +65,19 @@ class SBOMaudit:
         else:
             # Red
             if value is not None:
-                print(Text.styled(f"[ ] {text}: {value}", "red"))
+                self._send_to_console(f"[ ] {text}: {value}", "red")
+                self._component_message(f"{text}: {value}")
             elif len(failure_text) > 0:
-                print(Text.styled(f"[ ] {text}: {failure_text}", "red"))
+                self._send_to_console(f"[ ] {text}: {failure_text}", "red")
+                self._component_message(f"{text}: {failure_text}")
             else:
-                print(Text.styled(f"[ ] {text}", "red"))
+                self._send_to_console(f"[ ] {text}", "red")
+                self._component_message(f"{text}")
             self.check_count["Fail"] = self.check_count["Fail"] + 1
 
     def _heading(self, title):
-        print(Panel(title, style="bold", expand=False))
+        if self.console_out:
+            print(Panel(title, style="bold", expand=False))
 
     def _check_value(self, text, values, data_item):
         self._show_result(text, data_item in values, data_item)
@@ -77,7 +104,7 @@ class SBOMaudit:
         return maven_version
 
     def find_latest_version(self, name, version=None):
-        """Returns the latest version and release date of the package available at PyPI."""
+        """Returns the version and release date of the package available at PyPI."""
 
         url: str = f"https://pypi.org/pypi/{name}/json"
         pypi_version = None
@@ -159,6 +186,8 @@ class SBOMaudit:
         self._heading("SBOM Format Summary")
         fail_count = self.check_count["Fail"]
 
+        self.component = []
+
         # Check that document is a valid SBOM
         if document.get_type() is not None:
             # Check recent version of SBOM
@@ -188,7 +217,10 @@ class SBOMaudit:
         if not self.verbose:
             if self.check_count["Fail"] == fail_count:
                 # No tests failed
-                self._show_text("SBOM Format")
+                self._show_text("Valid SBOM Format")
+
+        self.audit["metadata"] = self.component
+        self.component = []
 
         files_valid = True
         packages_valid = True
@@ -302,6 +334,13 @@ class SBOMaudit:
                             not (copyright in [None, "NOASSERTION"]),
                             failure_text="",
                         )
+                if len(self.component) > 0:
+                    self.element["name"] = name
+                    self.element["id"] = id
+                    self.element["reports"] = self.component
+                    self.file_component.append(self.element)
+                    self.element = {}
+                    self.component = []
 
                 if id is None or name is None:
                     files_valid = False
@@ -312,6 +351,9 @@ class SBOMaudit:
                 if self.check_count["Fail"] == fail_count:
                     # No tests failed
                     self._show_text("File Summary")
+
+            self.audit["files"] = self.file_component
+            self.component = []
 
         if len(packages) > 0:
             self._heading("Package Summary")
@@ -470,6 +512,14 @@ class SBOMaudit:
                     else:
                         self._check(f"Package name missing for {id}", False)
 
+                if len(self.component) > 0:
+                    self.element["name"] = name
+                    self.element["version"] = version
+                    self.element["reports"] = self.component
+                    self.package_component.append(self.element)
+                    self.element = {}
+                    self.component = []
+
                 if (
                     id is None
                     or name is None
@@ -485,6 +535,9 @@ class SBOMaudit:
                 if self.check_count["Fail"] == fail_count:
                     # No tests failed
                     self._show_text("Package Summary")
+
+            self.audit["packages"] = self.package_component
+            self.component = []
 
         self._heading("Relationships Summary")
         fail_count = self.check_count["Fail"]
@@ -521,6 +574,9 @@ class SBOMaudit:
                 # No tests failed
                 self._show_text("Relationships Summary")
 
+        self.audit["relationships"] = self.component
+        self.component = []
+
         self._heading("NTIA Summary")
         fail_count = self.check_count["Fail"]
 
@@ -544,3 +600,4 @@ class SBOMaudit:
         self.verbose = True
         self._show_text(f"Checks passed {self.check_count['Pass']}")
         self._show_text(f"Checks failed {self.check_count['Fail']}")
+        self.audit["summary"] = self.component
