@@ -167,6 +167,7 @@ def main(argv=None):
     }
 
     sbom_parser = SBOMParser()
+    ntia_compliance = False
     # Load SBOM - will autodetect SBOM type
     try:
         sbom_parser.parse_file(input_file)
@@ -176,7 +177,7 @@ def main(argv=None):
             sbom_audit.process_file(args["allow"], allow=True)
         if args["deny"]:
             sbom_audit.process_file(args["deny"], allow=False)
-        sbom_audit.audit_sbom(sbom_parser)
+        ntia_compliance = sbom_audit.audit_sbom(sbom_parser)
 
         if args["output_file"] != "":
             audit_out = SBOMOutput(args["output_file"], "json")
@@ -185,7 +186,8 @@ def main(argv=None):
     except FileNotFoundError:
         print(f"{input_file} not found")
 
-    return 0
+    # Return 0 for False, 1 for True
+    return int(ntia_compliance)
 
 
 if __name__ == "__main__":

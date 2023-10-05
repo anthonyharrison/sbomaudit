@@ -601,3 +601,5 @@ class SBOMaudit:
         self._show_text(f"Checks passed {self.check_count['Pass']}")
         self._show_text(f"Checks failed {self.check_count['Fail']}")
         self.audit["summary"] = self.component
+
+        return valid_sbom

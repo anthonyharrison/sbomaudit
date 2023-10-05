@@ -54,13 +54,14 @@ Output:
 The `--input-file` option is used to specify the SBOM to be processed. The format of the SBOM is determined according to
 the following filename conventions.
 
-| SBOM      | Format    | Filename extension |
-| --------- | --------- |--------------------|
-| SPDX      | TagValue  | .spdx              |
-| SPDX      | JSON      | .spdx.json         |
-| SPDX      | YAML      | .spdx.yaml         |
-| SPDX      | YAML      | .spdx.yml          |
-| CycloneDX | JSON      | .json              |
+| SBOM      | Format   | Filename extension |
+| --------- |----------|--------------------|
+| SPDX      | TagValue | .spdx              |
+| SPDX      | JSON     | .spdx.json         |
+| SPDX      | YAML     | .spdx.yaml         |
+| SPDX      | YAML     | .spdx.yml          |
+| CycloneDX | JSON     | .json              |
+| CycloneDX | XML      | .xml               |
 
 The `--offline` option is used when the tool is used in an environment where access to external systems is not available. This means
 that some audit checks are not performed.
@@ -445,7 +446,7 @@ As the `--verbose` option is specified, the resulting JSON file contains the res
   ],
   "summary": [
     {
-      "text": "NTIA conformant",
+      "text": "NTIA Summary",
       "state": "Pass"
     },
     {
@@ -459,6 +460,14 @@ As the `--verbose` option is specified, the resulting JSON file contains the res
   ]
 }
 ```
+
+## Return Values
+
+The following values are returned:
+
+- -1 indicates SBOM file not specified
+- 0 indicates NTIA compliance has failed
+- 1 indicates NTIA compliance has passed
 
 ## License
 
