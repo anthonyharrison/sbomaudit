@@ -7,6 +7,7 @@ from pathlib import Path
 import dateutil.parser
 import pytz
 import requests
+from lib4package.metadata import Metadata
 from lib4sbom.data.document import SBOMDocument
 from lib4sbom.license import LicenseScanner
 from packageurl import PackageURL
@@ -23,6 +24,7 @@ class SBOMaudit:
         self.purl_check = options.get("purlcheck", False)
         self.license_check = options.get("license_check", True)
         self.age = int(options.get("age", "0"))
+        self.debug = options.get("debug", False)
         DAYS_IN_YEAR = 365
         self.maxage = int(options.get("maxage", "2")) * DAYS_IN_YEAR
         self.license_scanner = LicenseScanner()
@@ -85,24 +87,6 @@ class SBOMaudit:
     def _check(self, text, value, failure_text="MISSING"):
         self._show_result(text, value, failure_text=failure_text)
 
-    def find_latest_version_maven(self, name):
-        """Returns the latest version of the package available at Maven Central."""
-
-        url: str = f"https://search.maven.org/solrsearch/select?q=a:{name}&wt=json"
-        maven_version = None
-        try:
-            package_json = requests.get(url).json()
-            maven_version = package_json["response"]["docs"][0]["latestVersion"]
-        except Exception as error:
-            print(
-                f"""
-            -------------------------- Can't check Maven Central for the latest version -------
-            Exception details: {error}
-            Please make sure you have a working internet connection or try again later.
-            """
-            )
-        return maven_version
-
     def find_latest_version(self, name, version=None):
         """Returns the version and release date of the package available at PyPI."""
 
@@ -119,40 +103,16 @@ class SBOMaudit:
                 "upload_time_iso_8601"
             ]
         except Exception as error:
-            print(
-                f"""
-            -------------------------- Can't check PyPi for the latest version -------
-            Exception details: {error}
-            Please make sure you have a working internet connection or try again later.
-            """
-            )
+            if self.debug:
+                print(f"Unable to retrieve Python data for {name} - {version}. {error}")
         return pypi_version, pypi_date
 
-    def get_latest_version(self, name, backend="PyPI"):
-        url: str = f"https://release-monitoring.org/api/v2/projects/?name={name}"
-        latest_version = None
-        try:
-            package_json = requests.get(url).json()
-            if (
-                package_json["total_items"] == 1
-                and package_json["items"][0]["backend"].lower() == backend.lower()
-            ):
-                latest_version = package_json["items"][0]["stable_versions"][0]
-            else:
-                for item in package_json["items"]:
-                    if item["backend"].lower() == backend.lower():
-                        latest_version = item["stable_versions"][0]
-                        break
-
-        except Exception as error:
-            print(
-                f"""
-            -------------------------- Can't check for the latest version -------
-            Exception details: {error}
-            Please make sure you have a working internet connection or try again later.
-            """
-            )
-        return latest_version
+    def get_package_info(self, package_name, package_type):
+        self.package_metadata = Metadata(package_type, debug=self.debug)
+        self.package_metadata.get_package(package_name)
+        latest_version = self.package_metadata.get_latest_version()
+        latest_date = self.package_metadata.get_latest_release_time()
+        return latest_version, latest_date
 
     def process_file(self, filename, allow):
         # Only process if file exists
@@ -401,18 +361,20 @@ class SBOMaudit:
                                             _, latest_date = self.find_latest_version(
                                                 name, version=version
                                             )
-                                        elif purl["type"] == "maven":
-                                            # Maven package detected
-                                            latest_version = (
-                                                self.find_latest_version_maven(name)
-                                            )
                                         else:
-                                            latest_version = self.get_latest_version(
-                                                name, backend=purl["type"]
+                                            (
+                                                latest_version,
+                                                latest_date,
+                                            ) = self.get_package_info(
+                                                name, purl["type"]
                                             )
                                     purl_name = purl["name"]
                                 except ValueError:
                                     purl_used = False
+                                if self.debug:
+                                    print(
+                                        f"Version check for {name} within {purl['type']} ecosystem. {latest_version} {latest_date}"
+                                    )
                             elif external_ref[1] in ["cpe22Type", "cpe23Type"]:
                                 cpe_used = True
 
@@ -473,7 +435,6 @@ class SBOMaudit:
                                 failure_text=report,
                             )
                         if latest_date is not None:
-
                             release_date = dateutil.parser.parse(latest_date)
                             release_age = (
                                 pytz.utc.localize(datetime.datetime.utcnow())

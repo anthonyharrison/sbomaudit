@@ -16,7 +16,6 @@ from sbomaudit.version import VERSION
 
 
 def main(argv=None):
-
     argv = argv or sys.argv
     app_name = "sbomaudit"
     parser = argparse.ArgumentParser(
@@ -164,6 +163,7 @@ def main(argv=None):
         "license_check": not args["disable_license_check"],
         "age": args["age"],
         "maxage": args["maxage"],
+        "debug": args["debug"],
     }
 
     sbom_parser = SBOMParser()

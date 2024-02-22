@@ -153,12 +153,12 @@ The following checks are performed on each package item:
 
 - Check that a version is specified.
 
-- Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+- Check that the package version is the latest released version of the package. The latest version checks are only performed if the `--offline` option is not specified.
 
-- Check that a mature version of the package is being used as determined by the value specified in the `--age` option. The release date checks are only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+- Check that a mature version of the package is being used as determined by the value specified in the `--age` option. The release date checks are only performed if the `--offline` option is not specified.
 
 - Check the age of a package being used, which is not the latest released version, is greater than the value specified in the `--maxage` option.
-The check is only performed if the `--offline` option is not specified and is only performed for Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+The check is only performed if the `--offline` option is not specified.
 
 - Check that a license is specified and that the license identified is a valid [SPDX License identifier](https://spdx.org/licenses/). Note that NOASSERTION is not considered a valid license.
 
@@ -171,6 +171,22 @@ The check is only performed if the `--offline` option is not specified and is on
 - Check that a [PURL specification](https://github.com/package-url/purl-spec) is provided for the package.
 
 - Check that a [CPE specification](https://nvd.nist.gov/products/cpe) is provided for the package.
+
+### Latest package version checks
+
+The checks for the latest package version are performed for packages within the following language ecosystems:
+
+- dart
+- go
+- java
+- javascript
+- .net
+- perl
+- python
+- r
+- ruby
+- rust
+- swift
 
 ### Relationships
 
