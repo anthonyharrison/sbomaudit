@@ -29,6 +29,7 @@ class SBOMaudit:
         self.maxage = int(options.get("maxage", "2")) * DAYS_IN_YEAR
         self.license_scanner = LicenseScanner()
         self.check_count = {"Fail": 0, "Pass": 0}
+        self.policy_check_count = {"Fail": 0, "Pass": 0}
         self.allow_list = {}
         self.deny_list = {}
         # Audit data in JSON
@@ -36,6 +37,7 @@ class SBOMaudit:
         self.package_component = []
         self.file_component = []
         self.relationship_component = []
+        self.policy_component = []
         self.component = []
         self.element = {}
         self.console_out = output == ""
@@ -43,39 +45,51 @@ class SBOMaudit:
     def get_audit(self):
         return self.audit
 
-    def _component_message(self, message, state="Fail"):
+    def _component_message(self, message, state="Fail", policy=False):
         element = {"text": message, "state": state}
-        if len(self.component) > 0:
-            self.component.append(element)
+        if not policy:
+            if len(self.component) > 0:
+                self.component.append(element)
+            else:
+                self.component = [element]
         else:
-            self.component = [element]
+            if len(self.policy_component) > 0:
+                self.policy_component.append(element)
+            else:
+                self.policy_component = [element]
 
     def _send_to_console(self, text, colour):
         if self.console_out:
             print(Text.styled(text, colour))
 
-    def _show_text(self, text):
+    def _show_text(self, text, policy=False):
         self._send_to_console(f"[x] {text}", "green")
-        self._component_message(f"{text}", state="Pass")
+        self._component_message(f"{text}", state="Pass", policy=policy)
 
-    def _show_result(self, text, state, value=None, failure_text="MISSING"):
+    def _show_result(self, text, state, value=None, failure_text="MISSING", policy=False):
         if state:
             # Green
             if self.verbose:
-                self._show_text(text)
-            self.check_count["Pass"] = self.check_count["Pass"] + 1
+                self._show_text(text, policy=policy)
+            if not policy:
+                self.check_count["Pass"] = self.check_count["Pass"] + 1
+            else:
+                self.policy_check_count["Pass"] = self.policy_check_count["Pass"] + 1
         else:
             # Red
             if value is not None:
                 self._send_to_console(f"[ ] {text}: {value}", "red")
-                self._component_message(f"{text}: {value}")
+                self._component_message(f"{text}: {value}", policy=policy)
             elif len(failure_text) > 0:
                 self._send_to_console(f"[ ] {text}: {failure_text}", "red")
-                self._component_message(f"{text}: {failure_text}")
+                self._component_message(f"{text}: {failure_text}", policy=policy)
             else:
                 self._send_to_console(f"[ ] {text}", "red")
-                self._component_message(f"{text}")
-            self.check_count["Fail"] = self.check_count["Fail"] + 1
+                self._component_message(f"{text}", policy=policy)
+            if not policy:
+                self.check_count["Fail"] = self.check_count["Fail"] + 1
+            else:
+                self.policy_check_count["Fail"] = self.policy_check_count["Fail"] + 1
 
     def _heading(self, title):
         if self.console_out:
@@ -84,8 +98,8 @@ class SBOMaudit:
     def _check_value(self, text, values, data_item):
         self._show_result(text, data_item in values, data_item)
 
-    def _check(self, text, value, failure_text="MISSING"):
-        self._show_result(text, value, failure_text=failure_text)
+    def _check(self, text, value, failure_text="MISSING", policy=False):
+        self._show_result(text, value, failure_text=failure_text, policy=policy)
 
     def find_latest_version(self, name, version=None):
         """Returns the version and release date of the package available at PyPI."""
@@ -241,12 +255,14 @@ class SBOMaudit:
                                 f"Allowed License check for {name}",
                                 license in allow_licenses,
                                 failure_text=f"{license} not allowed",
+                                policy = True,
                             )
                         if deny_licenses is not None:
                             self._check(
                                 f"Denied License check for {name}",
                                 not (license in deny_licenses),
                                 failure_text=f"{license} not allowed",
+                                policy=True,
                             )
                         self._check(
                             f"Copyright defined - {name} : {copyright}",
@@ -282,12 +298,14 @@ class SBOMaudit:
                                 f"Allowed License check for {id}",
                                 license in allow_licenses,
                                 failure_text=f"{license} not allowed",
+                                policy = True,
                             )
                         if deny_licenses is not None:
                             self._check(
                                 f"Denied License check for {id}",
                                 not (license in deny_licenses),
                                 failure_text=f"{license} not allowed",
+                                policy=True,
                             )
                         self._check(
                             f"Copyright defined - {id} : {copyright}",
@@ -384,13 +402,15 @@ class SBOMaudit:
                             self._check(
                                 f"Allowed Package check for package {name}",
                                 name in allow_packages,
-                                failure_text=f"{package} not allowed",
+                                failure_text=f"{name} not allowed",
+                                policy=True,
                             )
                         if deny_packages is not None:
                             self._check(
                                 f"Denied Package check for package {name}",
                                 not (name in deny_packages),
                                 failure_text=f"{name} not allowed",
+                                policy=True,
                             )
                         self._check(f"Supplier included for package {name}", supplier)
                         self._check(f"Version included for package {name}", version)
@@ -420,12 +440,14 @@ class SBOMaudit:
                                 f"Allowed License check for package {name}",
                                 license in allow_licenses,
                                 failure_text=f"{license} not allowed",
+                                policy=True,
                             )
                         if deny_licenses is not None:
                             self._check(
                                 f"Denied License check for package {name}",
                                 not (license in deny_licenses),
                                 failure_text=f"{license} not allowed",
+                                policy=True,
                             )
                         if latest_version is not None:
                             report = f"Version is {version}; latest is {latest_version}"
@@ -446,6 +468,7 @@ class SBOMaudit:
                                 f"Using mature version of package {name}",
                                 release_age.days > self.age,
                                 failure_text=report,
+                                policy=True,
                             )
                             # Check age of release if not using the latest version
                             if latest_version is not None and latest_version != version:
@@ -453,6 +476,7 @@ class SBOMaudit:
                                     f"Using old version of package {name}",
                                     release_age.days < self.maxage,
                                     failure_text=report,
+                                    policy=True,
                                 )
                         if self.cpe_check:
                             self._check(
@@ -499,6 +523,8 @@ class SBOMaudit:
 
             self.audit["packages"] = self.package_component
             self.component = []
+
+        self.audit["policy"] = self.policy_component
 
         self._heading("Relationships Summary")
         fail_count = self.check_count["Fail"]
@@ -561,6 +587,8 @@ class SBOMaudit:
         self.verbose = True
         self._show_text(f"Checks passed {self.check_count['Pass']}")
         self._show_text(f"Checks failed {self.check_count['Fail']}")
+        self._show_text(f"Policy checks passed {self.policy_check_count['Pass']}")
+        self._show_text(f"Policy checks failed {self.policy_check_count['Fail']}")
         self.audit["summary"] = self.component
 
         return valid_sbom
