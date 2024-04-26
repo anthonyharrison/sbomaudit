@@ -92,6 +92,8 @@ The files are text files consisting of two sections
 
 Each section is optional.
 
+These files can be used to enforce a development policy e.g. use the deny list to report on licences which are not approved.
+
 In this sample allow file, this would only allow cemponents with the MIT, Apache-2.0 or BSD-3-Clause licenses.
 It is also only expecting a single package 'click'.
 
@@ -203,6 +205,12 @@ The following checks are performed:
 The following checks are performed:
 
 - Check that the contents of the SBOM meet the minimum requirements for an SBOM as defined by the [NTIA](https://www.ntia.doc.gov/files/ntia/publications/sbom_minimum_elements_report.pdf).
+
+### Implementing a Development Policy
+
+The use of the `--age`, `--maxage`, `--allow` and `--deny` options can be used to enforce a development policy.
+
+A report of the checks which violate against the development policy is contained in a section within the output file.
 
 ## Example
 
@@ -436,18 +444,20 @@ As the `--verbose` option is specified, the resulting JSON file contains the res
           "state": "Pass"
         },
         {
-          "text": "Using latest version of package click: Version is 8.0.3; latest is 8.1.6",
+          "text": "Using latest version of package click: Version is 8.0.3; latest is 8.1.7",
           "state": "Fail"
-        },
-        {
-          "text": "Using mature version of package click",
-          "state": "Pass"
-        },
-        {
-          "text": "Using old version of package click",
-          "state": "Pass"
         }
       ]
+    }
+  ],
+  "policy": [
+    {
+      "text": "Using mature version of package click",
+      "state": "Pass"
+    },
+    {
+      "text": "Using old version of package click: Age of release is 928 days",
+      "state": "Fail"
     }
   ],
   "relationships": [
@@ -462,15 +472,23 @@ As the `--verbose` option is specified, the resulting JSON file contains the res
   ],
   "summary": [
     {
-      "text": "NTIA Summary",
+      "text": "NTIA conformant",
       "state": "Pass"
     },
     {
-      "text": "Checks passed 15",
+      "text": "Checks passed 13",
       "state": "Pass"
     },
     {
       "text": "Checks failed 1",
+      "state": "Pass"
+    },
+    {
+      "text": "Policy checks passed 1",
+      "state": "Pass"
+    },
+    {
+      "text": "Policy checks failed 1",
       "state": "Pass"
     }
   ]
