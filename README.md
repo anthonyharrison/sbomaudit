@@ -117,7 +117,7 @@ The following section identifies the checks which are performed.
 
 The following checks are performed:
 
-- Check that the version of the SBOM is either version 2.2 or 2.3 (SPDX) or version 1.3, 1.4 or 1.5 (CycloneDX).
+- Check that the version of the SBOM is either version 2.2 or 2.3 (SPDX) or version 1.3, 1.4, 1.5 or 1.6 (CycloneDX).
 
 - Check that a creator is defined.
 
