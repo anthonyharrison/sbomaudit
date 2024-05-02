@@ -339,6 +339,9 @@ class SBOMaudit:
             for package in packages:
                 # Minimum elements are ID, Name, Version, Supplier
                 id = package.get("id", None)
+                name = None
+                version = None
+                supplier = None
                 if id is None:
                     self._check("Package id missing", id)
                 else:
