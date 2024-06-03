@@ -511,7 +511,7 @@ Licensed under the Apache 2.0 License.
 
 The tool has the following limitations:
 
-- The latest version checks are only performed on Python modules available on the [Python Package Index (PyPi)](https://pypi.org/).
+- The latest version checks are only performed in an environment where access to external systems is available.
 
 - Invalid SBOMs will result in unpredictable results.
 
